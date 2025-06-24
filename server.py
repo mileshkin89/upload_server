@@ -1,6 +1,8 @@
+# server.py
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import os
 import uuid
+import json
 from urllib.parse import unquote
 
 UPLOAD_DIR = "./images"
@@ -11,20 +13,34 @@ class UploadHandler(BaseHTTPRequestHandler):
         # Определяем путь
         route = unquote(self.path)
 
-        # Роутинг для HTML-страниц
-        if route == "/" or route == "/index.html":
+        # 1. Отдача загружаемых изображений (например, /images/abc.jpg)
+        if route.startswith("/images/") and any(route.endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".gif"]):
+            self.serve_static(route[1:])
+
+        # 2. Страница с отдельным просмотром изображения (например, /images/abc123.jpg)
+        elif route.startswith("/images/"):
+            self.serve_image_page(route.split("/images/")[1])
+
+        # 3. HTML-страницы
+        elif route in ["/", "/index.html"]:
             self.serve_html("index.html")
         elif route == "/images":
             self.serve_html("images.html")
         elif route == "/upload":
             self.serve_html("upload.html")
-        # Обработка статики: CSS, JS, картинки
-        elif route.startswith("/css/") or route.startswith("/js/") or route.startswith("/images/"):
-            self.serve_static(route[1:])  # Убираем ведущий /
-        elif route.startswith("/random_images/"):
+
+        # 4. API: список изображений
+        elif route == "/api/images":
+            self.serve_storage("images")
+
+        # 5. Остальная статика (CSS, JS и пр.)
+        elif route.startswith("/css/") or route.startswith("/js/") or route.startswith("/random_images/"):
             self.serve_static(route[1:])
+
+        # 6. Если ничего не подошло — ошибка
         else:
             self.send_error(404, f"Page not found: {route}")
+
 
     def serve_html(self, filename):
         try:
@@ -49,11 +65,11 @@ class UploadHandler(BaseHTTPRequestHandler):
             elif filepath.endswith(".js"):
                 content_type = "application/javascript"
             elif filepath.endswith(".png"):
-                content_type = "images/png"
+                content_type = "image/png"
             elif filepath.endswith(".jpg") or filepath.endswith(".jpeg"):
-                content_type = "images/jpeg"
+                content_type = "image/jpeg"
             elif filepath.endswith(".gif"):
-                content_type = "images/gif"
+                content_type = "image/gif"
             else:
                 content_type = "application/octet-stream"
 
@@ -63,6 +79,41 @@ class UploadHandler(BaseHTTPRequestHandler):
             self.wfile.write(content)
         except FileNotFoundError:
             self.send_error(404, f"Static file not found: {filepath}")
+
+    def serve_storage(self, filepath):
+        try:
+            files = os.listdir(filepath)
+            # Оставляем только изображения
+            images = [f for f in files if f.endswith(('.png', '.jpg', '.jpeg', '.gif'))]
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(images).encode())
+        except Exception as e:
+            self.send_error(500, f"Error reading image directory: {e}")
+
+    def serve_image_page(self, filename):
+        filepath = os.path.join(UPLOAD_DIR, filename)
+        abs_path = os.path.abspath(filepath)
+
+        if not abs_path.startswith(os.path.abspath(UPLOAD_DIR)) or not os.path.isfile(abs_path):
+            self.send_error(404, f"Image {filename} not found or invalid path")
+            return
+
+        try:
+            with open("user_image.html", "r", encoding="utf-8") as f:
+                html = f.read()
+        except FileNotFoundError:
+            self.send_error(404, f"{filename} not found")
+            return
+
+        html = html.replace("{filename}", filename)
+
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(html.encode("utf-8"))
+
 
     def do_POST(self):
         content_type = self.headers.get("Content-Type")
@@ -124,6 +175,23 @@ class UploadHandler(BaseHTTPRequestHandler):
         self.end_headers()
         response = f'{{"filename": "{unique_name}"}}'
         self.wfile.write(response.encode())
+
+
+    def do_DELETE(self):
+        route = unquote(self.path)
+        if route.startswith("/api/images/"):
+            filename = route.split("/api/images/")[1]
+            filepath = os.path.join(UPLOAD_DIR, filename)
+
+            if os.path.exists(filepath):
+                os.remove(filepath)
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b"File deleted")
+            else:
+                self.send_error(404, "File not found")
+        else:
+            self.send_error(404, "Invalid DELETE route")
 
 
 if __name__ == "__main__":

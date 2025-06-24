@@ -1,3 +1,4 @@
+<!--images.html-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,6 +7,7 @@
   <title>Uploaded Images</title>
   <link rel="stylesheet" href="css/images.css"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="js/storage.js"></script>
 </head>
 <body>
 <div class="images-container">
@@ -34,8 +36,12 @@
   <!-- Table rows -->
   <div class="table-row">
     <div class="file-name">
-      <img src="random_images/1.png" alt="icon" class="file-icon">
-      <span>Cat.png</span>
+      <a href="/images/${encodeURIComponent(file)}" class="file-link">
+        <img src="random_images/1.png" alt="icon" class="file-icon">
+      </a>
+      <a href="/images/${encodeURIComponent(file)}" class="file-link">
+        <span>Cat.png</span>
+      </a>
     </div>
     <div class="file-url">https://sharefile.xyz/file.jpg</div>
     <div class="file-delete">
