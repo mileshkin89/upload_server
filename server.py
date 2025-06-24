@@ -13,14 +13,36 @@ class UploadHandler(BaseHTTPRequestHandler):
         # Определяем путь
         route = unquote(self.path)
 
+        # Не работают иконки в "image.html"
+        # # 1. Отображение страницы просмотра отдельного изображения
+        # if route.startswith("/images/") and any(route.endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".gif"]):
+        #     # Вместо того чтобы отдавать сам файл — отдаем HTML с встраиванием
+        #     self.serve_image_page(route.split("/images/")[1])
+        # # 2. Галерея
+        # elif route == "/images":
+        #     self.serve_html("images.html")
+        # # 3. Отдача остальных HTML-страниц
+        # elif route in ["/", "/index.html"]:
+        #     self.serve_html("index.html")
+        # elif route == "/upload":
+        #     self.serve_html("upload.html")
+        # # 4. API
+        # elif route == "/api/images":
+        #     self.serve_storage("images")
+        # # 5. Статика
+        # elif route.startswith("/css/") or route.startswith("/js/") or route.startswith("/random_images/"):
+        #     self.serve_static(route[1:])
+        # # 6. Если ничего не подошло — ошибка
+        # else:
+        #     self.send_error(404, f"Page not found: {route}")
+
+        # Не работает "user_image.html"
         # 1. Отдача загружаемых изображений (например, /images/abc.jpg)
         if route.startswith("/images/") and any(route.endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".gif"]):
             self.serve_static(route[1:])
-
         # 2. Страница с отдельным просмотром изображения (например, /images/abc123.jpg)
         elif route.startswith("/images/"):
             self.serve_image_page(route.split("/images/")[1])
-
         # 3. HTML-страницы
         elif route in ["/", "/index.html"]:
             self.serve_html("index.html")
@@ -28,15 +50,12 @@ class UploadHandler(BaseHTTPRequestHandler):
             self.serve_html("images.html")
         elif route == "/upload":
             self.serve_html("upload.html")
-
         # 4. API: список изображений
         elif route == "/api/images":
             self.serve_storage("images")
-
         # 5. Остальная статика (CSS, JS и пр.)
         elif route.startswith("/css/") or route.startswith("/js/") or route.startswith("/random_images/"):
             self.serve_static(route[1:])
-
         # 6. Если ничего не подошло — ошибка
         else:
             self.send_error(404, f"Page not found: {route}")
