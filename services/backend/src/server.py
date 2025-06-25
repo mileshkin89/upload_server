@@ -5,10 +5,12 @@ import uuid
 import json
 from urllib.parse import unquote
 
-UPLOAD_DIR = "./images"
+UPLOAD_DIR = "../../../images"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../frontend"))
 
 class UploadHandler(BaseHTTPRequestHandler):
+
     def do_GET(self):
         # Определяем путь
         route = unquote(self.path)
@@ -45,14 +47,14 @@ class UploadHandler(BaseHTTPRequestHandler):
             self.serve_image_page(route.split("/images/")[1])
         # 3. HTML-страницы
         elif route in ["/", "/index.html"]:
-            self.serve_html("index.html")
+            self.serve_html("../../frontend/index.html")
         elif route == "/images":
-            self.serve_html("images.html")
+            self.serve_html("../../frontend/images.html")
         elif route == "/upload":
-            self.serve_html("upload.html")
+            self.serve_html("../../frontend/upload.html")
         # 4. API: список изображений
         elif route == "/api/images":
-            self.serve_storage("images")
+            self.serve_storage("../../../images")
         # 5. Остальная статика (CSS, JS и пр.)
         elif route.startswith("/css/") or route.startswith("/js/") or route.startswith("/random_images/"):
             self.serve_static(route[1:])
@@ -75,7 +77,8 @@ class UploadHandler(BaseHTTPRequestHandler):
 
     def serve_static(self, filepath):
         try:
-            with open(filepath, "rb") as f:
+            full_path = os.path.join(FRONTEND_DIR, filepath)
+            with open(full_path, "rb") as f:
                 content = f.read()
 
             # Определим Content-Type по расширению
@@ -120,7 +123,7 @@ class UploadHandler(BaseHTTPRequestHandler):
             return
 
         try:
-            with open("user_image.html", "r", encoding="utf-8") as f:
+            with open("../../frontend/user_image.html", "r", encoding="utf-8") as f:
                 html = f.read()
         except FileNotFoundError:
             self.send_error(404, f"{filename} not found")

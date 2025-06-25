@@ -46,6 +46,16 @@ window.addEventListener('DOMContentLoaded', () => {
         });
 
         container.appendChild(row);
+
+        const fileNameDiv = row.querySelector('.file-name');
+        const fileIconImg = row.querySelector('.file-icon');
+
+        // Клик на превью или на имя — переход на страницу просмотра
+        [fileNameDiv, fileIconImg].forEach(el => {
+          el.addEventListener('click', () => {
+            window.location.href = `/images/${encodeURIComponent(file)}`;
+          });
+        });
       });
     });
 });
