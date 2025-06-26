@@ -6,6 +6,7 @@ import json
 import shutil
 from multipart import parse_form
 from PIL import Image, UnidentifiedImageError
+from multiprocessing import Process, current_process
 from exceptions import APIError, MaxSizeExceedError, MultipleFilesUploadError, NotSupportedFormatError
 from settings.config import config
 from settings.logging_config import get_logger
@@ -72,13 +73,11 @@ class UploadHandler(BaseHTTPRequestHandler):
 
 
     def _handle_request(self, routes: dict[str, str]) -> None:
-        print("_handle_request//  path = ", self.path)
         handler_name = routes.get(self.path)
         if not handler_name:
             for route_prefix, candidate_handler in routes.items():
                 if self.path.startswith(route_prefix):
                     handler_name = candidate_handler
-                    print("11 handler name = ", handler_name)
                     break
 
         if not handler_name:
@@ -95,7 +94,7 @@ class UploadHandler(BaseHTTPRequestHandler):
 
     def _serve_html(self, filename):
         full_path = os.path.join(config.FRONTEND_DIR, filename)
-        logger.info(f"_serve_html full_path = {full_path}")
+
         try:
             with open(full_path, "rb") as f:
                 content = f.read()
@@ -112,6 +111,7 @@ class UploadHandler(BaseHTTPRequestHandler):
     def _serve_static(self, filepath: str, repo: str = config.FRONTEND_DIR):
         full_path = os.path.join(repo, filepath)
         logger.info(f"_serve_static full_path = {full_path}")
+
         if not os.path.isfile(full_path):
             self._send_json_error(404, f"Static file not found: {filepath}")
             return
@@ -120,7 +120,6 @@ class UploadHandler(BaseHTTPRequestHandler):
             with open(full_path, "rb") as f:
                 content = f.read()
 
-            # Content-Type
             if filepath.endswith(".css"):
                 content_type = "text/css"
             elif filepath.endswith(".js"):
@@ -144,9 +143,8 @@ class UploadHandler(BaseHTTPRequestHandler):
     def _serve_storage(self, filepath):
         try:
             files = os.listdir(filepath)
-            # Оставляем только изображения
             images = [f for f in files if f.endswith(('.png', '.jpg', '.jpeg', '.gif'))]
-            print("_serve_storage images = ", images)
+
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
@@ -156,7 +154,6 @@ class UploadHandler(BaseHTTPRequestHandler):
 
 
     def _handle_images_repo(self):
-        print("_handle_images_repo  self.path = ", self.path)
         if self.path.startswith("/images_repo/") and any(self.path.endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".gif"]):
             filepath = self.path[len("/images_repo/"):]
             self._serve_static(filepath, config.UPLOAD_DIR)
@@ -289,19 +286,30 @@ class UploadHandler(BaseHTTPRequestHandler):
 
 
     def _handle_delete_image(self):
-        print("_handle_delete_image  self.path = ", self.path)
         self._delete_image(self.path)
 
 
 
 
-if __name__ == "__main__":
-    try:
-        server = HTTPServer(("localhost", 8000), UploadHandler)
-        print("Upload server running on http://localhost:8000")
-        server.serve_forever()
-    except Exception:
-        server.shutdown()
+def run_server_on_port(port: int):
+    current_process().name = f"worker-{port}"
+    logger.info(f"Starting server on http://localhost:{port}")
+    server = HTTPServer(("localhost", port), UploadHandler)
+    server.serve_forever()
+
+
+def run(workers: int = 1, start_port: int = 8000):
+    for i in range(workers):
+        port = start_port + i
+        p = Process(target=run_server_on_port, args=(port,))
+        p.start()
+        logger.info(f"Worker {i + 1} started on port {port}")
+
+
+if __name__ == '__main__':
+    run(workers=config.WEB_SERVER_WORKERS, start_port=config.WEB_SERVER_START_PORT)
+
+
 
 
 

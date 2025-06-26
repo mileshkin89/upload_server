@@ -14,6 +14,9 @@ class AppConfig(BaseSettings):
     LOG_DIR: Path
     FRONTEND_DIR: Path = BASE_DIR.parent / "frontend"
 
+    WEB_SERVER_WORKERS: int
+    WEB_SERVER_START_PORT: int
+
     MAX_FILE_SIZE: int = 5 * 1024 * 1024
     SUPPORTED_FORMATS: set[str] = {'.jpg', '.png', '.gif'}
 
@@ -26,4 +29,4 @@ class AppConfig(BaseSettings):
 # Global application config instance
 config = AppConfig()
 
-print(config.FRONTEND_DIR)
+
