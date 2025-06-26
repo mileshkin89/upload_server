@@ -3,7 +3,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const randomNumber = Math.floor(Math.random() * 5) + 1;
 
-  const imagePath = `random_images/${randomNumber}.png`;
+  const imagePath = `/static/random_images/${randomNumber}.png`;
 
   heroImage.style.backgroundImage = `url('${imagePath}')`;
 });
