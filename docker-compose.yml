@@ -1,0 +1,46 @@
+services:
+  upload_backend:
+    restart: always
+    build:
+      context: services/backend
+      dockerfile: Dockerfile
+    container_name: upload-server
+    command: [ "python", "server.py" ]
+    env_file:
+      - services/backend/.env
+    environment:
+      - LOG_LEVEL=debug
+      - PYTHONPATH=/usr/src/upload-server
+    volumes:
+      - ./services/backend/src:/usr/src/upload-server
+      - ./services/frontend:/usr/src/frontend
+      - ./images_repo:/usr/src/images
+      - ./logs:/usr/src/logs
+    ports:
+      - "8000-8009:8000-8009"
+#    healthcheck:
+#      test: [ "CMD", "curl", "-f", "http://localhost:8000" ]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 3
+    networks:
+      - upload-server-network
+
+  nginx:
+    image: nginx:stable-alpine3.21-perl
+    container_name: upload-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./images_repo:/usr/src/images:ro
+      - ./services/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./logs/nginx:/var/log/nginx
+      - ./services/frontend:/usr/share/nginx/html:ro
+#    depends_on:
+#      upload_backend:
+#        condition: service_healthy
+    networks:
+      - upload-server-network
+
+networks:
+  upload-server-network:
